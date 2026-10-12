@@ -1,0 +1,31 @@
+name: montaj_1
+description: A professional cinematic video editor built with Flutter.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # مكتبة تشغيل الفيديوهات المحترمة والمعتمدة في المعاينة
+  video_player: ^2.9.5
+  
+  # مكتبة اختيار الصور والفيديوهات من المعرض
+  image_picker: ^1.1.2
+  
+  # مكتبة معالجة ومونتاج الفيديو السريع
+  ffmpeg_kit_flutter_new_video: ^2.5.7
+  
+  # مكتبات حفظ ومشاركة الفيديو النهائي
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
