@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:ffmpeg_kit_flutter_new_video/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_video/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_video/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -22,7 +21,7 @@ class AdvancedMontajApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'استوديو المونتاج الاحترافي Pro',
+      title: 'استوديو المونتاج الذكي PRO',
       locale: const Locale('ar'),
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -34,7 +33,10 @@ class AdvancedMontajApp extends StatelessWidget {
           onSurface: Color(0xFFE2E4E9),
         ),
       ),
-      builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child!),
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: child!,
+      ),
       home: const StudioProPage(),
     );
   }
@@ -42,69 +44,125 @@ class AdvancedMontajApp extends StatelessWidget {
 
 class AdvancedStylePreset {
   const AdvancedStylePreset({
-    required this.id, required this.label,
-    required this.contrast, required this.saturation, 
-    required this.gamma, required this.letterbox, required this.description,
+    required this.id,
+    required this.label,
+    required this.contrast,
+    required this.saturation,
+    required this.gamma,
+    required this.letterbox,
+    required this.description,
   });
-  final String id, label, description;
-  final double contrast, saturation, gamma;
+
+  final String id;
+  final String label;
+  final String description;
+  final double contrast;
+  final double saturation;
+  final double gamma;
   final bool letterbox;
 }
 
-const advancedStyles = <AdvancedStylePreset>[
-  AdvancedStylePreset(id: 'hollywood', label: 'هوليوود السينمائي', contrast: 1.15, saturation: 0.85, gamma: 0.95, letterbox: true, description: 'ألوان باردة مع تباين سينمائي فاخر وصندوق أسود'),
-  AdvancedStylePreset(id: 'teal_orange', label: 'تيل آند أورنج', contrast: 1.20, saturation: 1.25, gamma: 1.00, letterbox: false, description: 'عزل ألوان البشرة مع تلوين الخلفية بالأزرق الساحر'),
-  AdvancedStylePreset(id: 'vintage_70s', label: 'كلاسيك السبعينات', contrast: 0.90, saturation: 0.70, gamma: 1.10, letterbox: false, description: 'طابع الأفلام القديمة الدافئ والمحبب للعين'),
-  AdvancedStylePreset(id: 'cyberpunk', label: 'نيون مستقبلي', contrast: 1.30, saturation: 1.50, gamma: 0.90, letterbox: false, description: 'ألوان نيون مشبعة جداً ملائمة لمقاطع الجيمنج والحركة'),
-  AdvancedStylePreset(id: 'documentary', label: 'وثائقي واقعي', contrast: 1.02, saturation: 0.80, gamma: 1.00, letterbox: true, description: 'ألوان حقيقية ومريحة مأخوذة من كاميرات البث الاحترافية'),
-  AdvancedStylePreset(id: 'noir', label: 'دراما أبيض وأسود', contrast: 1.35, saturation: 0.00, gamma: 0.85, letterbox: true, description: 'إضاءة درامية حادة وظلال عميقة بدون ألوان'),
-  AdvancedStylePreset(id: 'vlog_warm', label: 'فلوج دافئ', contrast: 1.05, saturation: 1.12, gamma: 1.05, letterbox: false, description: 'إضاءة مبهجة ملائمة لليوميات والرحلات الخارجية'),
-  AdvancedStylePreset(id: 'commercial', label: 'إعلاني تجاري', contrast: 1.18, saturation: 1.20, gamma: 0.98, letterbox: false, description: 'ألوان حادة وبراقة تزيد من جاذبية المنتجات والخدمات'),
+const List<AdvancedStylePreset> advancedStyles = [
+  AdvancedStylePreset(
+    id: 'hollywood',
+    label: 'هوليوود السينمائي',
+    contrast: 1.15,
+    saturation: 0.85,
+    gamma: 0.95,
+    letterbox: true,
+    description: 'ألوان باردة مع تباين سينمائي فاخر وصندوق أسود',
+  ),
+  AdvancedStylePreset(
+    id: 'teal_orange',
+    label: 'تيل آند أورنج',
+    contrast: 1.20,
+    saturation: 1.25,
+    gamma: 1.00,
+    letterbox: false,
+    description: 'عزل ألوان البشرة مع تلوين الخلفية بالأزرق الساحر',
+  ),
+  AdvancedStylePreset(
+    id: 'vintage_70s',
+    label: 'كلاسيك السبعينات',
+    contrast: 0.90,
+    saturation: 0.70,
+    gamma: 1.10,
+    letterbox: false,
+    description: 'طابع الأفلام القديمة الدافئ والمحبب للعين',
+  ),
+  AdvancedStylePreset(
+    id: 'cyberpunk',
+    label: 'نيون مستقبلي',
+    contrast: 1.30,
+    saturation: 1.50,
+    gamma: 0.90,
+    letterbox: false,
+    description: 'ألوان نيون مشبعة جداً ملائمة لمقاطع الجيمنج والحركة',
+  ),
+  AdvancedStylePreset(
+    id: 'documentary',
+    label: 'وثائقي واقعي',
+    contrast: 1.02,
+    saturation: 0.80,
+    gamma: 1.00,
+    letterbox: true,
+    description: 'ألوان حقيقية ومريحة مأخوذة من كاميرات البث الاحترافية',
+  ),
+  AdvancedStylePreset(
+    id: 'noir',
+    label: 'دراما أبيض وأسود',
+    contrast: 1.35,
+    saturation: 0.00,
+    gamma: 0.85,
+    letterbox: true,
+    description: 'إضاءة درامية حادة وظلال عميقة بدون ألوان',
+  ),
 ];
 
 class ShotItem {
   ShotItem({required this.path, required this.isImage, required this.name});
-  final String path, name;
+  final String path;
+  final String name;
   final bool isImage;
 }
 
 class StudioProPage extends StatefulWidget {
   const StudioProPage({super.key});
+
   @override
   State<StudioProPage> createState() => _StudioProPageState();
 }
 
 class _StudioProPageState extends State<StudioProPage> {
-  final _picker = ImagePicker();
+  final ImagePicker _picker = ImagePicker();
   final List<ShotItem> _shots = [];
-  
+
   int _selectedStyle = 0;
   int _selectedAspect = 0;
   int _currentPlayingIndex = 0;
   int _durationIndex = 2;
-  
+
   bool _isPlayingPreview = false;
   bool _isGeneratingVideo = false;
-  
+
   double _previewProgress = 0.0;
   String _generationStatus = '';
-  
+
   VideoPlayerController? _videoController;
   Timer? _playbackTimer;
   Timer? _progressUpdateTimer;
 
-  static const aspectRatios = [
+  static const List<(String, int, int)> aspectRatios = [
     ('ريلز وتيك توك (9:16)', 720, 1280),
     ('يوتيوب عريض (16:9)', 1280, 720),
     ('انستقرام مربع (1:1)', 1080, 1080),
   ];
 
-  static const targetDurations = [
+  static const List<(String, double)> targetDurations = [
     ('٥ ثوانٍ', 5.0),
     ('١٠ ثوانٍ', 10.0),
     ('٣٠ ثانية', 30.0),
     ('٦٠ ثانية (دقيقة)', 60.0),
-    ('١٢٠ ثانية (دقيقتين)', 120.0),
   ];
 
   AdvancedStylePreset get currentStyle => advancedStyles[_selectedStyle];
@@ -129,10 +187,13 @@ class _StudioProPageState extends State<StudioProPage> {
       return;
     }
     try {
-      final pickedFiles = isImage ? await _picker.pickMultiImage() : await _picker.pickMultiVideo();
+      final List<XFile> pickedFiles = isImage 
+          ? await _picker.pickMultiImage() 
+          : await _picker.pickMultiVideo();
+          
       if (pickedFiles.isEmpty) return;
-      
-      for (final file in pickedFiles.take(12 - _shots.length)) {
+
+      for (final XFile file in pickedFiles.take(12 - _shots.length)) {
         if (!mounted) return;
         setState(() {
           _shots.add(ShotItem(path: file.path, isImage: isImage, name: file.name));
@@ -144,12 +205,13 @@ class _StudioProPageState extends State<StudioProPage> {
   }
 
   void _showSnackBar(String text) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   Future<void> _stopPreview() async {
     _clearTimers();
-    final controller = _videoController;
+    final VideoPlayerController? controller = _videoController;
     _videoController = null;
     await controller?.pause();
     await controller?.dispose();
@@ -174,7 +236,7 @@ class _StudioProPageState extends State<StudioProPage> {
 
   Future<void> _loadCurrentPreviewShot() async {
     if (!_isPlayingPreview || _shots.isEmpty) return;
-    final currentShot = _shots[_currentPlayingIndex];
+    final ShotItem currentShot = _shots[_currentPlayingIndex];
     double currentHoldTime = singleShotDuration;
 
     if (!currentShot.isImage) {
@@ -185,7 +247,7 @@ class _StudioProPageState extends State<StudioProPage> {
           await _videoController!.dispose();
           return;
         }
-        final actualDuration = _videoController!.value.duration.inMilliseconds / 1000;
+        final double actualDuration = _videoController!.value.duration.inMilliseconds / 1000;
         if (actualDuration > 0 && actualDuration < currentHoldTime) {
           currentHoldTime = actualDuration;
         }
@@ -203,7 +265,7 @@ class _StudioProPageState extends State<StudioProPage> {
     _playbackTimer = Timer(Duration(milliseconds: (currentHoldTime * 1000).round()), () async {
       _progressUpdateTimer?.cancel();
       if (!_isPlayingPreview) return;
-      
+
       if (_videoController != null) {
         await _videoController!.pause();
         await _videoController!.dispose();
@@ -211,7 +273,11 @@ class _StudioProPageState extends State<StudioProPage> {
       }
 
       if (_currentPlayingIndex >= _shots.length - 1) {
-        if (mounted) setState(() => _isPlayingPreview = false);
+        if (mounted) {
+          setState(() {
+            _isPlayingPreview = false;
+          });
+        }
         return;
       }
 
@@ -227,9 +293,9 @@ class _StudioProPageState extends State<StudioProPage> {
 
   void _startProgressTimer(double duration) {
     _progressUpdateTimer?.cancel();
-    final startTime = DateTime.now();
+    final DateTime startTime = DateTime.now();
     _progressUpdateTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      final elapsed = DateTime.now().difference(startTime).inMilliseconds / 1000;
+      final double elapsed = DateTime.now().difference(startTime).inMilliseconds / 1000;
       if (mounted) {
         setState(() {
           _previewProgress = (elapsed / duration).clamp(0.0, 1.0);
@@ -247,23 +313,23 @@ class _StudioProPageState extends State<StudioProPage> {
     await _stopPreview();
 
     try {
-      final appDir = await getTemporaryDirectory();
-      final targetSize = aspectRatios[_selectedAspect];
-      final width = targetSize.$2;
-      final height = targetSize.$3;
-      final outputVideoPath = '${appDir.path}/render_${DateTime.now().millisecondsSinceEpoch}.mp4';
-      
+      final Directory appDir = await getTemporaryDirectory();
+      final (String, int, int) targetSize = aspectRatios[_selectedAspect];
+      final int width = targetSize.$2;
+      final int height = targetSize.$3;
+      final String outputVideoPath = '${appDir.path}/render_${DateTime.now().millisecondsSinceEpoch}.mp4';
+
       final List<String> ffmpegArguments = [];
       final double shotDuration = singleShotDuration;
 
-      for (final shot in _shots) {
-        ffmpegArguments.addAll(shot.isImage 
-            ? ['-loop', '1', '-t', '$shotDuration', '-i', shot.path] 
+      for (final ShotItem shot in _shots) {
+        ffmpegArguments.addAll(shot.isImage
+            ? ['-loop', '1', '-t', '$shotDuration', '-i', shot.path]
             : ['-ss', '0', '-t', '$shotDuration', '-i', shot.path]);
       }
 
       String filterGraph = '';
-      for (var i = 0; i < _shots.length; i++) {
+      for (int i = 0; i < _shots.length; i++) {
         filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1';
         filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
@@ -273,7 +339,7 @@ class _StudioProPageState extends State<StudioProPage> {
       }
 
       String concatFilter = '';
-      for (var i = 0; i < _shots.length; i++) {
+      for (int i = 0; i < _shots.length; i++) {
         concatFilter += '[v$i]';
       }
       concatFilter += 'concat=n=${_shots.length}:v=1:a=0[outv]';
@@ -285,10 +351,8 @@ class _StudioProPageState extends State<StudioProPage> {
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
         '-threads', '0',
-        '-tune', 'fastdecode',
         '-pix_fmt', 'yuv420p',
-        '-vsync', '2',
-        '-y', outputVideoPath
+        '-y', outputVideoPath,
       ]);
 
       setState(() => _generationStatus = 'محرك المعالجة يجمع الفريمات الذكية بأقصى سرعة عتادية...');
@@ -297,8 +361,8 @@ class _StudioProPageState extends State<StudioProPage> {
       final returnCode = await session.getReturnCode();
 
       if (ReturnCode.isSuccess(returnCode)) {
-        setState(() => _generationStatus = 'اكتمل إنتاج الفيديو بنجاح! جاري التجهيز...');
-        await Share.shareXFiles([XFile(outputVideoPath)], text: 'فيديو احترافي من استوديو المونتاج الذكي بالذكاء الاصطناعي');
+        setState(() => _generationStatus = 'اكتمل إنتاج الفيديو بنجاح! جاري التجهيز للمشاركة...');
+        await Share.shareXFiles([XFile(outputVideoPath)], text: 'فيديو احترافي من استوديو المونتاج الذكي');
       } else {
         _showSnackBar('فشلت عملية رندرة وتوليد الفيديو النهائي');
       }
@@ -318,7 +382,10 @@ class _StudioProPageState extends State<StudioProPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('استوديو المونتاج الذكي PRO', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text(
+          'استوديو المونتاج الذكي PRO',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
         centerTitle: true,
         backgroundColor: const Color(0xFF141619),
         elevation: 0,
@@ -332,9 +399,17 @@ class _StudioProPageState extends State<StudioProPage> {
                   children: [
                     const CircularProgressIndicator(color: Color(0xFF00FF66), strokeWidth: 5),
                     const SizedBox(height: 24),
-                    Text(_generationStatus, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
+                    Text(
+                      _generationStatus,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 12),
-                    const Text('يتم الآن استخدام كامل كفاءة العتاد والذكاء الاصطناعي للمعالجة السريعة', style: TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
+                    const Text(
+                      'يتم الآن استخدام كامل كفاءة العتاد والذكاء الاصطناعي للمعالجة السريعة',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               ),
@@ -360,30 +435,49 @@ class _StudioProPageState extends State<StudioProPage> {
                                   children: [
                                     Icon(Icons.psychology_outlined, size: 48, color: Color(0xFF00FF66)),
                                     SizedBox(height: 12),
-                                    Text('محرك الذكاء الاصطناعي جاهز، أضف لقطات للبدء', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                    Text(
+                                      'محرك الذكاء الاصطناعي جاهز، أضف لقطات للبدء',
+                                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                                    ),
                                   ],
                                 )
                               : (_shots[_currentPlayingIndex].isImage
                                   ? Image.file(File(_shots[_currentPlayingIndex].path), fit: BoxFit.contain)
                                   : (_videoController != null && _videoController!.value.isInitialized
-                                      ? AspectRatio(aspectRatio: _videoController!.value.aspectRatio, child: VideoPlayer(_videoController!))
+                                      ? AspectRatio(
+                                          aspectRatio: _videoController!.value.aspectRatio,
+                                          child: VideoPlayer(_videoController!),
+                                        )
                                       : const CircularProgressIndicator(color: Colors.white))),
                         ),
                         if (_isPlayingPreview)
                           Positioned(
-                            bottom: 0, left: 0, right: 0,
-                            child: LinearProgressIndicator(value: _previewProgress, backgroundColor: Colors.white10, color: Colors.amber, minHeight: 4),
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: LinearProgressIndicator(
+                              value: _previewProgress,
+                              backgroundColor: Colors.white10,
+                              color: Colors.amber,
+                              minHeight: 4,
+                            ),
                           ),
                         if (_shots.isNotEmpty)
                           Positioned(
-                            top: 12, right: 12,
+                            top: 12,
+                            right: 12,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(20))
-
-                              child: Text('اللقطة: ${_currentPlayingIndex + 1}/${_shots.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'اللقطة: ${_currentPlayingIndex + 1}/${_shots.length}',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                          )
+                          ),
                       ],
                     ),
                   ),
@@ -394,7 +488,11 @@ class _StudioProPageState extends State<StudioProPage> {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A1C1F), padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A1C1F),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
                           icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
                           label: const Text('أضف صور'),
                           onPressed: () => _addMedia(isImage: true),
@@ -403,7 +501,11 @@ class _StudioProPageState extends State<StudioProPage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A1C1F), padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A1C1F),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
                           icon: const Icon(Icons.video_collection_outlined, size: 18),
                           label: const Text('أضف فيديو'),
                           onPressed: () => _addMedia(isImage: false),
@@ -417,7 +519,13 @@ class _StudioProPageState extends State<StudioProPage> {
                   flex: 3,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: const BoxDecoration(color: Color(0xFF141619), borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24))),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF141619),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
@@ -437,8 +545,13 @@ class _StudioProPageState extends State<StudioProPage> {
                                 underline: const SizedBox(),
                                 dropdownColor: const Color(0xFF1A1C1F),
                                 style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 13),
-                                items: List.generate(targetDurations.length, (i) => DropdownMenuItem(value: i, child: Text(targetDurations[i].$1))),
-                                onChanged: (val) { if (val != null) setState(() => _durationIndex = val); },
+                                items: List.generate(
+                                  targetDurations.length,
+                                  (i) => DropdownMenuItem(value: i, child: Text(targetDurations[i].$1)),
+                                ),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _durationIndex = val);
+                                },
                               ),
                             ],
                           ),
@@ -458,14 +571,23 @@ class _StudioProPageState extends State<StudioProPage> {
                                 underline: const SizedBox(),
                                 dropdownColor: const Color(0xFF1A1C1F),
                                 style: const TextStyle(color: Colors.cyan, fontWeight: FontWeight.bold, fontSize: 13),
-                                items: List.generate(advancedStyles.length, (i) => DropdownMenuItem(value: i, child: Text(advancedStyles[i].label))),
-                                onChanged: (val) { if (val != null) setState(() => _selectedStyle = val); },
+                                items: List.generate(
+                                  advancedStyles.length,
+                                  (i) => DropdownMenuItem(value: i, child: Text(advancedStyles[i].label)),
+                                ),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedStyle = val);
+                                },
                               ),
                             ],
                           ),
                           Padding(
                             padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(currentStyle.description, style: const TextStyle(fontSize: 11, color: Colors.grey), textDirection: TextDirection.rtl),
+                            child: Text(
+                              currentStyle.description,
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                              textDirection: TextDirection.rtl,
+                            ),
                           ),
                           const Divider(color: Colors.white10),
                           Row(
@@ -483,8 +605,13 @@ class _StudioProPageState extends State<StudioProPage> {
                                 underline: const SizedBox(),
                                 dropdownColor: const Color(0xFF1A1C1F),
                                 style: const TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                                items: List.generate(aspectRatios.length, (i) => DropdownMenuItem(value: i, child: Text(aspectRatios[i].$1))),
-                                onChanged: (val) { if (val != null) setState(() => _selectedAspect = val); },
+                                items: List.generate(
+                                  aspectRatios.length,
+                                  (i) => DropdownMenuItem(value: i, child: Text(aspectRatios[i].$1)),
+                                ),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedAspect = val);
+                                },
                               ),
                             ],
                           ),
@@ -493,10 +620,22 @@ class _StudioProPageState extends State<StudioProPage> {
                             children: [
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: Colors.white24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                                  icon: Icon(_isPlayingPreview ? Icons.stop_circle_outlined : Icons.play_circle_outline, color: Colors.white),
-                                  label: Text(_isPlayingPreview ? 'إيقاف المعاينة' : 'تشغيل المعاينة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                  onPressed: _shots.isEmpty || _isGeneratingVideo ? null : (_isPlayingPreview ? _stopPreview : _startPreview),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: const BorderSide(color: Colors.white24),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  icon: Icon(
+                                    _isPlayingPreview ? Icons.stop_circle_outlined : Icons.play_circle_outline,
+                                    color: Colors.white,
+                                  ),
+                                  label: Text(
+                                    _isPlayingPreview ? 'إيقاف المعاينة' : 'تشغيل المعاينة',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                  onPressed: _shots.isEmpty || _isGeneratingVideo
+                                      ? null
+                                      : (_isPlayingPreview ? _stopPreview : _startPreview),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -510,7 +649,10 @@ class _StudioProPageState extends State<StudioProPage> {
                                     elevation: 4,
                                   ),
                                   icon: const Icon(Icons.bolt),
-                                  label: const Text('توليد وإنتاج ذكي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                  label: const Text(
+                                    'توليد وإنتاج ذكي',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
                                   onPressed: _shots.isEmpty || _isGeneratingVideo ? null : _generateFinalVideo,
                                 ),
                               ),
@@ -521,7 +663,7 @@ class _StudioProPageState extends State<StudioProPage> {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
     );
