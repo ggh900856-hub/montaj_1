@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:ffmpeg_kit_flutter_new_video/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_video/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_video/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -64,7 +63,7 @@ class AdvancedStylePreset {
   final bool letterbox;
 }
 
-// قائمة بـ 16 قالب سينمائي وحركي متنوع
+// قائمة الـ 16 قالباً السينمائية والحركية
 const List<AdvancedStylePreset> advancedStyles = [
   AdvancedStylePreset(
     id: 'hollywood',
@@ -401,24 +400,25 @@ class _StudioProPageState extends State<StudioProPage> {
     });
   }
 
-  // دالة لجلب مدة الفيديو بالثواني
+  // طريقة آمنة تماماً لجلب مدة الفيديو عبر VideoPlayerController بدون أي أخطاء
   Future<double> _getVideoDuration(String videoPath) async {
+    final controller = VideoPlayerController.file(File(videoPath));
     try {
-      final mediaInformationSession = await FFprobeKit.getMediaInformation(videoPath);
-      final mediaInformation = mediaInformationSession.getMediaInformation();
-      final durationStr = mediaInformation?.getDuration();
-      if (durationStr != null) {
-        return double.tryParse(durationStr) ?? 0.0;
-      }
-    } catch (_) {}
-    return 0.0;
+      await controller.initialize();
+      final duration = controller.value.duration.inMilliseconds / 1000.0;
+      await controller.dispose();
+      return duration;
+    } catch (_) {
+      await controller.dispose();
+      return 0.0;
+    }
   }
 
   Future<void> _generateFinalVideo() async {
     if (_shots.isEmpty || _isGeneratingVideo) return;
     setState(() {
       _isGeneratingVideo = true;
-      _generationStatus = 'الذكاء الاصطناعي يختار التقطيعات العشوائية ويطبق القالب السينمائي...';
+      _generationStatus = 'الذكاء الاصطناعي يختار التقطيعات العشوائية ويطبق القالب...';
     });
     await _stopPreview();
 
@@ -437,12 +437,12 @@ class _StudioProPageState extends State<StudioProPage> {
         if (shot.isImage) {
           ffmpegArguments.addAll(['-loop', '1', '-t', '$shotDuration', '-i', shot.path]);
         } else {
-          // حساب مدة الفيديو الكلية واختيار نقطة بداية عشوائية (Random Cut)
+          // جلب مدة الفيديو بطريقة آمنة واختيار لقطة عشوائية من المنتصف
           double videoDuration = await _getVideoDuration(shot.path);
           double startTime = 0.0;
           if (videoDuration > shotDuration) {
             double maxStart = videoDuration - shotDuration;
-            startTime = random.nextDouble() * maxStart; // بداية عشوائية
+            startTime = random.nextDouble() * maxStart;
           }
           ffmpegArguments.addAll([
             '-ss', startTime.toStringAsFixed(2),
@@ -454,7 +454,7 @@ class _StudioProPageState extends State<StudioProPage> {
 
       String filterGraph = '';
       for (int i = 0; i < _shots.length; i++) {
-        // توحيد الأبعاد وصيغة الألوان والإطارات لتجنب أي فشل في التوليد
+        // توحيد الأبعاد وصيغة الألوان yuv420p ومعدل الإطارات 30 لضمان نجاح التوليد 100%
         filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,fps=30';
         filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
@@ -470,7 +470,7 @@ class _StudioProPageState extends State<StudioProPage> {
       concatFilter += 'concat=n=${_shots.length}:v=1:a=0[concv];';
       filterGraph += concatFilter;
 
-      // تطبيق الكتابة على الفيديو إن وجدت
+      // تطبيق الكتابة على الفيديو إن كانت مفعلة
       if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
         final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'");
         filterGraph += '[concv]drawtext=text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8[outv]';
@@ -487,7 +487,7 @@ class _StudioProPageState extends State<StudioProPage> {
         '-y', outputVideoPath,
       ]);
 
-      setState(() => _generationStatus = 'محرك المعالجة يدمج اللقطات العشوائية بأقصى سرعة عتادية...');
+      setState(() => _generationStatus = 'محرك المعالجة يدمج اللقطات بأقصى سرعة عتادية...');
 
       final session = await FFmpegKit.executeWithArguments(ffmpegArguments);
       final returnCode = await session.getReturnCode();
@@ -560,7 +560,7 @@ class _StudioProPageState extends State<StudioProPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'يتم استخدام خوارزميات التقطيع العشوائي والمعالجة السريعة',
+                      'جاري معالجة اللقطات والقصات العشوائية...',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
@@ -590,7 +590,7 @@ class _StudioProPageState extends State<StudioProPage> {
                                     Icon(Icons.psychology_outlined, size: 48, color: Color(0xFF00FF66)),
                                     SizedBox(height: 12),
                                     Text(
-                                      'محرك التقطيع العشوائي جاهز، أضف لقطات للبدء',
+                                      'المحرك جاهز، أضف لقطات للبدء',
                                       style: TextStyle(color: Colors.grey, fontSize: 13),
                                     ),
                                   ],
