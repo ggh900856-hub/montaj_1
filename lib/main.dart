@@ -144,6 +144,7 @@ class _StudioProPageState extends State<StudioProPage> {
 
   bool _isPlayingPreview = false;
   bool _isGeneratingVideo = false;
+  String? _lastGeneratedVideoPath;
 
   double _previewProgress = 0.0;
   String _generationStatus = '';
@@ -350,7 +351,6 @@ class _StudioProPageState extends State<StudioProPage> {
         '-map', '[outv]',
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
-        '-threads', '0',
         '-pix_fmt', 'yuv420p',
         '-y', outputVideoPath,
       ]);
@@ -361,8 +361,8 @@ class _StudioProPageState extends State<StudioProPage> {
       final returnCode = await session.getReturnCode();
 
       if (ReturnCode.isSuccess(returnCode)) {
-        setState(() => _generationStatus = 'اكتمل إنتاج الفيديو بنجاح! جاري التجهيز للمشاركة...');
-        await Share.shareXFiles([XFile(outputVideoPath)], text: 'فيديو احترافي من استوديو المونتاج الذكي');
+        _lastGeneratedVideoPath = outputVideoPath;
+        _showSnackBar('تم إنتاج الفيديو بنجاح! يمكنك الآن حفظه وتصديره.');
       } else {
         _showSnackBar('فشلت عملية رندرة وتوليد الفيديو النهائي');
       }
@@ -375,6 +375,25 @@ class _StudioProPageState extends State<StudioProPage> {
           _generationStatus = '';
         });
       }
+    }
+  }
+
+  Future<void> _exportAndSaveVideo() async {
+    if (_lastGeneratedVideoPath == null || !File(_lastGeneratedVideoPath!).existsSync()) {
+      _showSnackBar('يرجى توليد الفيديو أولاً بالنقر على "توليد وإنتاج ذكي"');
+      return;
+    }
+
+    try {
+      final Directory externalDir = Directory('/storage/emulated/0/Download');
+      if (await externalDir.exists()) {
+        final String savedPath = '${externalDir.path}/MontajPro_${DateTime.now().millisecondsSinceEpoch}.mp4';
+        await File(_lastGeneratedVideoPath!).copy(savedPath);
+        _showSnackBar('تم حفظ الفيديو في مجلد التنزيلات (Downloads)!');
+      }
+      await Share.shareXFiles([XFile(_lastGeneratedVideoPath!)], text: 'فيديو احترافي صُمم عبر استوديو المونتاج الذكي');
+    } catch (_) {
+      await Share.shareXFiles([XFile(_lastGeneratedVideoPath!)], text: 'فيديو احترافي صُمم عبر استوديو المونتاج الذكي');
     }
   }
 
@@ -615,7 +634,7 @@ class _StudioProPageState extends State<StudioProPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
                           Row(
                             children: [
                               Expanded(
@@ -657,6 +676,26 @@ class _StudioProPageState extends State<StudioProPage> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 12),
+                          // زر الحفظ والتصدير المخصص
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                backgroundColor: const Color(0xFF1E88E5),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 2,
+                              ),
+                              icon: const Icon(Icons.download_for_offline_outlined),
+                              label: const Text(
+                                'حفظ وتصدير الفيديو للجهاز',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              onPressed: _lastGeneratedVideoPath == null || _isGeneratingVideo ? null : _exportAndSaveVideo,
+                            ),
                           ),
                           const SizedBox(height: 24),
                         ],
