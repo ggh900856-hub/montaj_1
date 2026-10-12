@@ -379,7 +379,8 @@ class _StudioProPageState extends State<StudioProPage> {
                             top: 12, right: 12,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(color: Colors.black70, borderRadius: BorderRadius.circular(20)),
+                              BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(20))
+
                               child: Text('اللقطة: ${_currentPlayingIndex + 1}/${_shots.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
                           )
