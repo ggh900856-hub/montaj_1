@@ -63,7 +63,7 @@ class AdvancedStylePreset {
   final bool letterbox;
 }
 
-// قائمة الـ 16 قالباً السينمائية والحركية
+// الـ 16 قالب سينمائي وحركي
 const List<AdvancedStylePreset> advancedStyles = [
   AdvancedStylePreset(
     id: 'hollywood',
@@ -277,6 +277,7 @@ class _StudioProPageState extends State<StudioProPage> {
     _progressUpdateTimer?.cancel();
   }
 
+  // تم تحديث دالة إضافة الوسائط لنسخ الملفات محلياً ومنع مشاكل الـ content:// URIs
   Future<void> _addMedia({required bool isImage}) async {
     if (_shots.length >= 12) {
       _showSnackBar('الحد الأقصى ١٢ لقطة للمشروع');
@@ -289,10 +290,15 @@ class _StudioProPageState extends State<StudioProPage> {
           
       if (pickedFiles.isEmpty) return;
 
+      final Directory appDir = await getTemporaryDirectory();
+
       for (final XFile file in pickedFiles.take(12 - _shots.length)) {
+        final String localPath = '${appDir.path}/media_${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+        await File(file.path).copy(localPath);
+
         if (!mounted) return;
         setState(() {
-          _shots.add(ShotItem(path: file.path, isImage: isImage, name: file.name));
+          _shots.add(ShotItem(path: localPath, isImage: isImage, name: file.name));
         });
       }
     } catch (_) {
@@ -400,7 +406,6 @@ class _StudioProPageState extends State<StudioProPage> {
     });
   }
 
-  // طريقة آمنة تماماً لجلب مدة الفيديو عبر VideoPlayerController بدون أي أخطاء
   Future<double> _getVideoDuration(String videoPath) async {
     final controller = VideoPlayerController.file(File(videoPath));
     try {
@@ -437,16 +442,19 @@ class _StudioProPageState extends State<StudioProPage> {
         if (shot.isImage) {
           ffmpegArguments.addAll(['-loop', '1', '-t', '$shotDuration', '-i', shot.path]);
         } else {
-          // جلب مدة الفيديو بطريقة آمنة واختيار لقطة عشوائية من المنتصف
           double videoDuration = await _getVideoDuration(shot.path);
+          if (videoDuration <= 0) videoDuration = shotDuration;
+
+          // التأكد من أن مدة القصاصة لا تتجاوز مدة الفيديو الأصلي لمنع حدوث خطأ
+          double currentClipDuration = videoDuration < shotDuration ? videoDuration : shotDuration;
           double startTime = 0.0;
-          if (videoDuration > shotDuration) {
-            double maxStart = videoDuration - shotDuration;
-            startTime = random.nextDouble() * maxStart;
+          if (videoDuration > currentClipDuration) {
+            startTime = random.nextDouble() * (videoDuration - currentClipDuration);
           }
+          
           ffmpegArguments.addAll([
             '-ss', startTime.toStringAsFixed(2),
-            '-t', '$shotDuration',
+            '-t', currentClipDuration.toStringAsFixed(2),
             '-i', shot.path
           ]);
         }
@@ -454,7 +462,6 @@ class _StudioProPageState extends State<StudioProPage> {
 
       String filterGraph = '';
       for (int i = 0; i < _shots.length; i++) {
-        // توحيد الأبعاد وصيغة الألوان yuv420p ومعدل الإطارات 30 لضمان نجاح التوليد 100%
         filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,fps=30';
         filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
@@ -470,7 +477,6 @@ class _StudioProPageState extends State<StudioProPage> {
       concatFilter += 'concat=n=${_shots.length}:v=1:a=0[concv];';
       filterGraph += concatFilter;
 
-      // تطبيق الكتابة على الفيديو إن كانت مفعلة
       if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
         final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'");
         filterGraph += '[concv]drawtext=text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8[outv]';
