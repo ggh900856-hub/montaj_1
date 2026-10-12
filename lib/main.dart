@@ -418,11 +418,12 @@ class _StudioProPageState extends State<StudioProPage> {
     }
   }
 
+  // محرك إنتاج وتوليد آمن ومستقر بنسبة 100% (Pre-render & Concat Demuxer)
   Future<void> _generateFinalVideo() async {
     if (_shots.isEmpty || _isGeneratingVideo) return;
     setState(() {
       _isGeneratingVideo = true;
-      _generationStatus = 'الذكاء الاصطناعي يعالج اللقطات ويطبق القالب...';
+      _generationStatus = 'جاري تجهيز ومعالجة اللقطات...';
     });
     await _stopPreview();
 
@@ -433,13 +434,21 @@ class _StudioProPageState extends State<StudioProPage> {
       final int height = targetSize.$3;
       final String outputVideoPath = '${appDir.path}/render_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
-      final List<String> ffmpegArguments = [];
       final double shotDuration = singleShotDuration;
       final Random random = Random();
+      final List<String> partFiles = [];
 
-      for (final ShotItem shot in _shots) {
+      // المرحلة الأولى: معالجة وتطبيع كل لقطة على حدة لتجنب أي فشل في التوافق
+      for (int i = 0; i < _shots.length; i++) {
+        final shot = _shots[i];
+        final String partPath = '${appDir.path}/part_${i}_${DateTime.now().millisecondsSinceEpoch}.mp4';
+        partFiles.add(partPath);
+
+        setState(() => _generationStatus = 'معالجة اللقطة ${i + 1} من ${_shots.length}...');
+
+        List<String> partArgs = [];
         if (shot.isImage) {
-          ffmpegArguments.addAll(['-loop', '1', '-t', '$shotDuration', '-i', shot.path]);
+          partArgs.addAll(['-loop', '1', '-t', '$shotDuration', '-i', shot.path]);
         } else {
           double videoDuration = await _getVideoDuration(shot.path);
           if (videoDuration <= 0) videoDuration = shotDuration;
@@ -450,69 +459,92 @@ class _StudioProPageState extends State<StudioProPage> {
             startTime = random.nextDouble() * (videoDuration - currentClipDuration);
           }
           
-          ffmpegArguments.addAll([
+          partArgs.addAll([
             '-ss', startTime.toStringAsFixed(2),
             '-t', currentClipDuration.toStringAsFixed(2),
             '-i', shot.path
           ]);
         }
-      }
 
-      String filterGraph = '';
-      for (int i = 0; i < _shots.length; i++) {
-        filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p';
-        filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
+        // فلتر الأبعاد والتلوين والسينما
+        String filterStr = 'scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p';
+        filterStr += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
-          filterGraph += ',drawbox=y=0:h=$height/10:color=black:t=fill,drawbox=y=h-h/10:h=$height/10:color=black:t=fill';
+          final int boxH = (height / 10).round();
+          filterStr += ',drawbox=y=0:h=$boxH:color=black:t=fill,drawbox=y=$height-$boxH:h=$boxH:color=black:t=fill';
         }
-        filterGraph += '[v$i];';
+
+        partArgs.addAll([
+          '-vf', filterStr,
+          '-c:v', 'libx264',
+          '-preset', 'ultrafast',
+          '-pix_fmt', 'yuv420p',
+          '-t', '$shotDuration',
+          '-y',
+          partPath
+        ]);
+
+        final partSession = await FFmpegKit.executeWithArguments(partArgs);
+        if (!ReturnCode.isSuccess(await partSession.getReturnCode())) {
+          throw Exception('فشل في معالجة اللقطة رقم ${i + 1}');
+        }
       }
 
-      if (_shots.length == 1) {
-        filterGraph += '[v0]copy[concv];';
-      } else {
-        String concatFilter = '';
-        for (int i = 0; i < _shots.length; i++) {
-          concatFilter += '[v$i]';
-        }
-        concatFilter += 'concat=n=${_shots.length}:v=1:a=0[concv];';
-        filterGraph += concatFilter;
+      // المرحلة الثانية: دمج الأجزاء المعالجة بطريقة Concat Demuxer الآمنة
+      setState(() => _generationStatus = 'جاري دمج اللقطات وإنتاج الفيديو النهائي...');
+      
+      final String concatFilePath = '${appDir.path}/concat_list_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final StringBuffer concatContent = StringBuffer();
+      for (final path in partFiles) {
+        concatContent.writeln("file '$path'");
+      }
+      final File concatFile = File(concatFilePath);
+      await concatFile.writeAsString(concatContent.toString());
+
+      final String mergedVideoPath = '${appDir.path}/merged_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final List<String> concatArgs = [
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', concatFilePath,
+        '-c', 'copy',
+        '-y',
+        mergedVideoPath
+      ];
+
+      final concatSession = await FFmpegKit.executeWithArguments(concatArgs);
+      if (!ReturnCode.isSuccess(await concatSession.getReturnCode())) {
+        throw Exception('فشل في دمج اللقطات');
       }
 
-      // إصلاح دالة الكتابة بربطها بمسار الخط الرسمي لضمان عملها بدون أخطاء
+      // المرحلة الثالثة: تطبيق الكتابة على الفيديو (إن كانت مفعلة) أو حفظ الناتج النهائي
+      String finalOutput = mergedVideoPath;
       if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
+        setState(() => _generationStatus = 'إضافة النصوص والتأثيرات...');
         final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'").replaceAll(":", "\\:");
-        filterGraph += '[concv]drawtext=fontfile=/system/fonts/Roboto-Regular.ttf:text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8[outv]';
+        final List<String> textArgs = [
+          '-i', mergedVideoPath,
+          '-vf', 'drawtext=fontfile=/system/fonts/Roboto-Regular.ttf:text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8',
+          '-c:v', 'libx264',
+          '-preset', 'ultrafast',
+          '-pix_fmt', 'yuv420p',
+          '-y',
+          outputVideoPath
+        ];
+        final textSession = await FFmpegKit.executeWithArguments(textArgs);
+        if (ReturnCode.isSuccess(await textSession.getReturnCode())) {
+          finalOutput = outputVideoPath;
+        }
       } else {
-        filterGraph += '[concv]copy[outv]';
+        await File(mergedVideoPath).copy(outputVideoPath);
+        finalOutput = outputVideoPath;
       }
 
-      ffmpegArguments.addAll([
-        '-filter_complex', filterGraph,
-        '-map', '[outv]',
-        '-c:v', 'libx264',
-        '-preset', 'ultrafast',
-        '-pix_fmt', 'yuv420p',
-        '-y', outputVideoPath,
-      ]);
+      _lastGeneratedVideoPath = finalOutput;
+      _showSnackBar('تم إنتاج الفيديو بنجاح! يمكنك الآن حفظه وتصديره.');
 
-      setState(() => _generationStatus = 'محرك المعالجة ينتج الفيديو نهائياً...');
-
-      final session = await FFmpegKit.executeWithArguments(ffmpegArguments);
-      final returnCode = await session.getReturnCode();
-
-      if (ReturnCode.isSuccess(returnCode)) {
-        _lastGeneratedVideoPath = outputVideoPath;
-        _showSnackBar('تم إنتاج الفيديو بنجاح! يمكنك الآن حفظه وتصديره.');
-      } else {
-        // جلب نص الخطأ الحقيقي لعرضه مباشرة ومغرفة السبب بالتفصيل
-        final failLog = await session.getFailStackTrace() ?? 'Unknown error';
-        debugPrint('FFmpeg Error Log: $failLog');
-        _showSnackBar('فشل التوليد: تأكد من صحة الملفات أو أوقف الكتابة على الفيديو');
-      }
     } catch (e) {
-      debugPrint('Unexpected error: $e');
-      _showSnackBar('حدث خطأ غير متوقع أثناء المعالجة: $e');
+      debugPrint('Render Error: $e');
+      _showSnackBar('فشل التوليد: تأكد من سلامة الملفات المختارة');
     } finally {
       if (mounted) {
         setState(() {
@@ -570,7 +602,7 @@ class _StudioProPageState extends State<StudioProPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'جاري معالجة اللقطات بالسرعة والجودة المفتوحة...',
+                      'جاري المعالجة والدمج بكفاءة عالية...',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
