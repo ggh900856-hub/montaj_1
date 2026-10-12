@@ -277,7 +277,6 @@ class _StudioProPageState extends State<StudioProPage> {
     _progressUpdateTimer?.cancel();
   }
 
-  // تم تحديث دالة إضافة الوسائط لنسخ الملفات محلياً ومنع مشاكل الـ content:// URIs
   Future<void> _addMedia({required bool isImage}) async {
     if (_shots.length >= 12) {
       _showSnackBar('الحد الأقصى ١٢ لقطة للمشروع');
@@ -423,7 +422,7 @@ class _StudioProPageState extends State<StudioProPage> {
     if (_shots.isEmpty || _isGeneratingVideo) return;
     setState(() {
       _isGeneratingVideo = true;
-      _generationStatus = 'الذكاء الاصطناعي يختار التقطيعات العشوائية ويطبق القالب...';
+      _generationStatus = 'الذكاء الاصطناعي يعالج اللقطات بالجودة الأصلية ويطبق القالب...';
     });
     await _stopPreview();
 
@@ -445,7 +444,6 @@ class _StudioProPageState extends State<StudioProPage> {
           double videoDuration = await _getVideoDuration(shot.path);
           if (videoDuration <= 0) videoDuration = shotDuration;
 
-          // التأكد من أن مدة القصاصة لا تتجاوز مدة الفيديو الأصلي لمنع حدوث خطأ
           double currentClipDuration = videoDuration < shotDuration ? videoDuration : shotDuration;
           double startTime = 0.0;
           if (videoDuration > currentClipDuration) {
@@ -462,7 +460,8 @@ class _StudioProPageState extends State<StudioProPage> {
 
       String filterGraph = '';
       for (int i = 0; i < _shots.length; i++) {
-        filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,fps=30';
+        // تم جعل معدل الإطارات ودقة الفيديو مفتوحة لدعم أي جودة أصلية دون فرض 30 إطاراً
+        filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p';
         filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
           filterGraph += ',drawbox=y=0:h=$height/10:color=black:t=fill,drawbox=y=h-h/10:h=$height/10:color=black:t=fill';
@@ -470,15 +469,20 @@ class _StudioProPageState extends State<StudioProPage> {
         filterGraph += '[v$i];';
       }
 
-      String concatFilter = '';
-      for (int i = 0; i < _shots.length; i++) {
-        concatFilter += '[v$i]';
+      // دعم اللقطة الواحدة أو المتعددة بسلاسة
+      if (_shots.length == 1) {
+        filterGraph += '[v0]copy[concv];';
+      } else {
+        String concatFilter = '';
+        for (int i = 0; i < _shots.length; i++) {
+          concatFilter += '[v$i]';
+        }
+        concatFilter += 'concat=n=${_shots.length}:v=1:a=0[concv];';
+        filterGraph += concatFilter;
       }
-      concatFilter += 'concat=n=${_shots.length}:v=1:a=0[concv];';
-      filterGraph += concatFilter;
 
       if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
-        final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'");
+        final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'").replaceAll(":", "\\:");
         filterGraph += '[concv]drawtext=text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8[outv]';
       } else {
         filterGraph += '[concv]copy[outv]';
@@ -493,7 +497,7 @@ class _StudioProPageState extends State<StudioProPage> {
         '-y', outputVideoPath,
       ]);
 
-      setState(() => _generationStatus = 'محرك المعالجة يدمج اللقطات بأقصى سرعة عتادية...');
+      setState(() => _generationStatus = 'محرك المعالجة ينتج الفيديو نهائياً...');
 
       final session = await FFmpegKit.executeWithArguments(ffmpegArguments);
       final returnCode = await session.getReturnCode();
@@ -566,7 +570,7 @@ class _StudioProPageState extends State<StudioProPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'جاري معالجة اللقطات والقصات العشوائية...',
+                      'جاري معالجة اللقطات بالسرعة والجودة المفتوحة...',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
