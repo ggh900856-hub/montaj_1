@@ -76,7 +76,7 @@ class StudioProPage extends StatefulWidget {
 
 class _StudioProPageState extends State<StudioProPage> {
   final _picker = ImagePicker();
-  final List<ShotItem> _shots =;
+  final List<ShotItem> _shots = [];
   
   int _selectedStyle = 0;
   int _selectedAspect = 0;
@@ -211,7 +211,7 @@ class _StudioProPageState extends State<StudioProPage> {
       }
 
       if (_currentPlayingIndex >= _shots.length - 1) {
-        if (mounted) setState(() => _playing = false);
+        if (mounted) setState(() => _isPlayingPreview = false);
         return;
       }
 
@@ -237,6 +237,7 @@ class _StudioProPageState extends State<StudioProPage> {
       }
     });
   }
+
   Future<void> _generateFinalVideo() async {
     if (_shots.isEmpty || _isGeneratingVideo) return;
     setState(() {
@@ -438,90 +439,90 @@ class _StudioProPageState extends State<StudioProPage> {
                                 items: List.generate(targetDurations.length, (i) => DropdownMenuItem(value: i, child: Text(targetDurations[i].$1))),
                                 onChanged: (val) { if (val != null) setState(() => _durationIndex = val); },
                               ),
-                    ],
-                  ),
-                  const Divider(color: Colors.white10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.auto_awesome, size: 18, color: Colors.cyan),
-                          SizedBox(width: 8),
-                          Text('قالب التلوين بالذكاء الاصطناعي:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      DropdownButton<int>(
-                        value: _selectedStyle,
-                        underline: const SizedBox(),
-                        dropdownColor: const Color(0xFF1A1C1F),
-                        style: const TextStyle(color: Colors.cyan, fontWeight: FontWeight.bold, fontSize: 13),
-                        items: List.generate(advancedStyles.length, (i) => DropdownMenuItem(value: i, child: Text(advancedStyles[i].label))),
-                        onChanged: (val) { if (val != null) setState(() => _selectedStyle = val); },
-                      ),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(currentStyle.description, style: const TextStyle(fontSize: 11, color: Colors.grey), textDirection: TextDirection.rtl),
-                  ),
-                  const Divider(color: Colors.white10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.aspect_ratio, size: 18, color: Colors.purpleAccent),
-                          SizedBox(width: 8),
-                          Text('أبعاد ومقاس شاشة الإخراج:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      DropdownButton<int>(
-                        value: _selectedAspect,
-                        underline: const SizedBox(),
-                        dropdownColor: const Color(0xFF1A1C1F),
-                        style: const TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                        items: List.generate(aspectRatios.length, (i) => DropdownMenuItem(value: i, child: Text(aspectRatios[i].$1))),
-                        onChanged: (val) { if (val != null) setState(() => _selectedAspect = val); },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: Colors.white24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                          icon: Icon(_isPlayingPreview ? Icons.stop_circle_outlined : Icons.play_circle_outline, color: Colors.white),
-                          label: Text(_isPlayingPreview ? 'إيقاف المعاينة' : 'تشغيل المعاينة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          onPressed: _shots.isEmpty || _isGeneratingVideo ? null : (_isPlayingPreview ? _stopPreview : _startPreview),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: const Color(0xFF00FF66),
-                            foregroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 4,
+                            ],
                           ),
-                          icon: const Icon(Icons.bolt, fontWeight: FontWeight.bold),
-                          label: const Text('توليد وإنتاج ذكي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          onPressed: _shots.isEmpty || _isGeneratingVideo ? null : _generateFinalVideo,
-                        ),
+                          const Divider(color: Colors.white10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.auto_awesome, size: 18, color: Colors.cyan),
+                                  SizedBox(width: 8),
+                                  Text('قالب التلوين بالذكاء الاصطناعي:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              DropdownButton<int>(
+                                value: _selectedStyle,
+                                underline: const SizedBox(),
+                                dropdownColor: const Color(0xFF1A1C1F),
+                                style: const TextStyle(color: Colors.cyan, fontWeight: FontWeight.bold, fontSize: 13),
+                                items: List.generate(advancedStyles.length, (i) => DropdownMenuItem(value: i, child: Text(advancedStyles[i].label))),
+                                onChanged: (val) { if (val != null) setState(() => _selectedStyle = val); },
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(currentStyle.description, style: const TextStyle(fontSize: 11, color: Colors.grey), textDirection: TextDirection.rtl),
+                          ),
+                          const Divider(color: Colors.white10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.aspect_ratio, size: 18, color: Colors.purpleAccent),
+                                  SizedBox(width: 8),
+                                  Text('أبعاد ومقاس شاشة الإخراج:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              DropdownButton<int>(
+                                value: _selectedAspect,
+                                underline: const SizedBox(),
+                                dropdownColor: const Color(0xFF1A1C1F),
+                                style: const TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                                items: List.generate(aspectRatios.length, (i) => DropdownMenuItem(value: i, child: Text(aspectRatios[i].$1))),
+                                onChanged: (val) { if (val != null) setState(() => _selectedAspect = val); },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: Colors.white24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                  icon: Icon(_isPlayingPreview ? Icons.stop_circle_outlined : Icons.play_circle_outline, color: Colors.white),
+                                  label: Text(_isPlayingPreview ? 'إيقاف المعاينة' : 'تشغيل المعاينة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  onPressed: _shots.isEmpty || _isGeneratingVideo ? null : (_isPlayingPreview ? _stopPreview : _startPreview),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    backgroundColor: const Color(0xFF00FF66),
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    elevation: 4,
+                                  ),
+                                  icon: const Icon(Icons.bolt),
+                                  label: const Text('توليد وإنتاج ذكي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                  onPressed: _shots.isEmpty || _isGeneratingVideo ? null : _generateFinalVideo,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                )
+              ],
             ),
-          ),
-        )
-      ],
-    ),
-  );
-}
+    );
+  }
 }
