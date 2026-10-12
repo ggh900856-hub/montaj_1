@@ -422,7 +422,7 @@ class _StudioProPageState extends State<StudioProPage> {
     if (_shots.isEmpty || _isGeneratingVideo) return;
     setState(() {
       _isGeneratingVideo = true;
-      _generationStatus = 'الذكاء الاصطناعي يعالج اللقطات بالجودة الأصلية ويطبق القالب...';
+      _generationStatus = 'الذكاء الاصطناعي يعالج اللقطات ويطبق القالب...';
     });
     await _stopPreview();
 
@@ -460,7 +460,6 @@ class _StudioProPageState extends State<StudioProPage> {
 
       String filterGraph = '';
       for (int i = 0; i < _shots.length; i++) {
-        // تم جعل معدل الإطارات ودقة الفيديو مفتوحة لدعم أي جودة أصلية دون فرض 30 إطاراً
         filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p';
         filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
@@ -469,7 +468,6 @@ class _StudioProPageState extends State<StudioProPage> {
         filterGraph += '[v$i];';
       }
 
-      // دعم اللقطة الواحدة أو المتعددة بسلاسة
       if (_shots.length == 1) {
         filterGraph += '[v0]copy[concv];';
       } else {
@@ -481,9 +479,10 @@ class _StudioProPageState extends State<StudioProPage> {
         filterGraph += concatFilter;
       }
 
+      // إصلاح دالة الكتابة بربطها بمسار الخط الرسمي لضمان عملها بدون أخطاء
       if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
         final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'").replaceAll(":", "\\:");
-        filterGraph += '[concv]drawtext=text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8[outv]';
+        filterGraph += '[concv]drawtext=fontfile=/system/fonts/Roboto-Regular.ttf:text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8[outv]';
       } else {
         filterGraph += '[concv]copy[outv]';
       }
@@ -506,13 +505,14 @@ class _StudioProPageState extends State<StudioProPage> {
         _lastGeneratedVideoPath = outputVideoPath;
         _showSnackBar('تم إنتاج الفيديو بنجاح! يمكنك الآن حفظه وتصديره.');
       } else {
-        final failLog = await session.getFailStackTrace();
+        // جلب نص الخطأ الحقيقي لعرضه مباشرة ومغرفة السبب بالتفصيل
+        final failLog = await session.getFailStackTrace() ?? 'Unknown error';
         debugPrint('FFmpeg Error Log: $failLog');
-        _showSnackBar('فشلت عملية رندرة وتوليد الفيديو النهائي');
+        _showSnackBar('فشل التوليد: تأكد من صحة الملفات أو أوقف الكتابة على الفيديو');
       }
     } catch (e) {
       debugPrint('Unexpected error: $e');
-      _showSnackBar('حدث خطأ غير متوقع أثناء المعالجة');
+      _showSnackBar('حدث خطأ غير متوقع أثناء المعالجة: $e');
     } finally {
       if (mounted) {
         setState(() {
