@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:ffmpeg_kit_flutter_new_video/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_video/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_video/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -62,10 +64,11 @@ class AdvancedStylePreset {
   final bool letterbox;
 }
 
+// قائمة بـ 16 قالب سينمائي وحركي متنوع
 const List<AdvancedStylePreset> advancedStyles = [
   AdvancedStylePreset(
     id: 'hollywood',
-    label: 'هوليوود السينمائي',
+    label: '1. هوليوود السينمائي',
     contrast: 1.15,
     saturation: 0.85,
     gamma: 0.95,
@@ -73,8 +76,17 @@ const List<AdvancedStylePreset> advancedStyles = [
     description: 'ألوان باردة مع تباين سينمائي فاخر وصندوق أسود',
   ),
   AdvancedStylePreset(
+    id: 'action_fast',
+    label: '2. أكشن وسرعة خاطفة',
+    contrast: 1.35,
+    saturation: 1.30,
+    gamma: 0.85,
+    letterbox: false,
+    description: 'تباين حاد وألوان بارزة تناسب التقطيع السريع والمشاهد الحركية',
+  ),
+  AdvancedStylePreset(
     id: 'teal_orange',
-    label: 'تيل آند أورنج',
+    label: '3. تيل آند أورنج سينمائي',
     contrast: 1.20,
     saturation: 1.25,
     gamma: 1.00,
@@ -82,8 +94,17 @@ const List<AdvancedStylePreset> advancedStyles = [
     description: 'عزل ألوان البشرة مع تلوين الخلفية بالأزرق الساحر',
   ),
   AdvancedStylePreset(
+    id: 'cyberpunk',
+    label: '4. نيون سايبر مستقبلي',
+    contrast: 1.30,
+    saturation: 1.50,
+    gamma: 0.90,
+    letterbox: false,
+    description: 'ألوان نيون مشبعة جداً ملائمة لمقاطع الجيمنج والتحديات',
+  ),
+  AdvancedStylePreset(
     id: 'vintage_70s',
-    label: 'كلاسيك السبعينات',
+    label: '5. كلاسيك السبعينات',
     contrast: 0.90,
     saturation: 0.70,
     gamma: 1.10,
@@ -91,17 +112,8 @@ const List<AdvancedStylePreset> advancedStyles = [
     description: 'طابع الأفلام القديمة الدافئ والمحبب للعين',
   ),
   AdvancedStylePreset(
-    id: 'cyberpunk',
-    label: 'نيون مستقبلي',
-    contrast: 1.30,
-    saturation: 1.50,
-    gamma: 0.90,
-    letterbox: false,
-    description: 'ألوان نيون مشبعة جداً ملائمة لمقاطع الجيمنج والحركة',
-  ),
-  AdvancedStylePreset(
     id: 'documentary',
-    label: 'وثائقي واقعي',
+    label: '6. وثائقي واقعي',
     contrast: 1.02,
     saturation: 0.80,
     gamma: 1.00,
@@ -110,7 +122,7 @@ const List<AdvancedStylePreset> advancedStyles = [
   ),
   AdvancedStylePreset(
     id: 'noir',
-    label: 'دراما أبيض وأسود',
+    label: '7. دراما أبيض وأسود',
     contrast: 1.35,
     saturation: 0.00,
     gamma: 0.85,
@@ -119,7 +131,7 @@ const List<AdvancedStylePreset> advancedStyles = [
   ),
   AdvancedStylePreset(
     id: 'sunset_golden',
-    label: 'غروب ذهبي دافئ',
+    label: '8. غروب ذهبي دافئ',
     contrast: 1.10,
     saturation: 1.30,
     gamma: 1.05,
@@ -128,7 +140,7 @@ const List<AdvancedStylePreset> advancedStyles = [
   ),
   AdvancedStylePreset(
     id: 'matrix_green',
-    label: 'ماتريكس سايبر',
+    label: '9. ماتريكس سينما',
     contrast: 1.25,
     saturation: 1.10,
     gamma: 0.90,
@@ -137,12 +149,66 @@ const List<AdvancedStylePreset> advancedStyles = [
   ),
   AdvancedStylePreset(
     id: 'vibrant_pop',
-    label: 'بوب آرت ساطع',
+    label: '10. بوب آرت حركي',
     contrast: 1.40,
     saturation: 1.60,
     gamma: 1.00,
     letterbox: false,
-    description: 'ألوان قوية وحيوية تلفت الانتباه فوراً للفيديوهات السريعة',
+    description: 'ألوان قوية وحيوية تلفت الانتباه فوراً في السوشيال ميديا',
+  ),
+  AdvancedStylePreset(
+    id: 'cold_thriller',
+    label: '11. إثارة وغموض بارد',
+    contrast: 1.25,
+    saturation: 0.60,
+    gamma: 0.90,
+    letterbox: true,
+    description: 'درجات ألوان ثلجية وزرقاء تعطي شعور الغموض والتشويق',
+  ),
+  AdvancedStylePreset(
+    id: 'autumn_vibes',
+    label: '12. خريف دافئ',
+    contrast: 1.15,
+    saturation: 1.10,
+    gamma: 1.05,
+    letterbox: false,
+    description: 'درجات البرتقالي والبني مع لمسة سينمائية هادئة',
+  ),
+  AdvancedStylePreset(
+    id: 'retro_vhs',
+    label: '13. فيديو كاسيت ريترو',
+    contrast: 1.05,
+    saturation: 0.85,
+    gamma: 1.15,
+    letterbox: false,
+    description: 'طابع التسعينات الثمانيناتي الدافئ مع ظلال ناعمة',
+  ),
+  AdvancedStylePreset(
+    id: 'high_contrast_bw',
+    label: '14. أبيض وأسود عالي التباين',
+    contrast: 1.50,
+    saturation: 0.00,
+    gamma: 0.80,
+    letterbox: false,
+    description: 'تباين حاد جداً ينفع للمشاهد الحركية السريعة والرياضة',
+  ),
+  AdvancedStylePreset(
+    id: 'soft_dreamy',
+    label: '15. حالم وناعم السينمائي',
+    contrast: 0.85,
+    saturation: 0.90,
+    gamma: 1.20,
+    letterbox: true,
+    description: 'إضاءة خفيفة وناعمة تناسب المشاهد الفنية والهادئة',
+  ),
+  AdvancedStylePreset(
+    id: 'urban_street',
+    label: '16. ستريت ستايل عصري',
+    contrast: 1.30,
+    saturation: 1.15,
+    gamma: 0.95,
+    letterbox: false,
+    description: 'تباين قوي وألوان متناسقة تناسب فلوجات الشارع والموضة',
   ),
 ];
 
@@ -335,11 +401,24 @@ class _StudioProPageState extends State<StudioProPage> {
     });
   }
 
+  // دالة لجلب مدة الفيديو بالثواني
+  Future<double> _getVideoDuration(String videoPath) async {
+    try {
+      final mediaInformationSession = await FFprobeKit.getMediaInformation(videoPath);
+      final mediaInformation = mediaInformationSession.getMediaInformation();
+      final durationStr = mediaInformation?.getDuration();
+      if (durationStr != null) {
+        return double.tryParse(durationStr) ?? 0.0;
+      }
+    } catch (_) {}
+    return 0.0;
+  }
+
   Future<void> _generateFinalVideo() async {
     if (_shots.isEmpty || _isGeneratingVideo) return;
     setState(() {
       _isGeneratingVideo = true;
-      _generationStatus = 'الذكاء الاصطناعي يحلل اللقطات ويضبط التوازن اللوني تلقائياً...';
+      _generationStatus = 'الذكاء الاصطناعي يختار التقطيعات العشوائية ويطبق القالب السينمائي...';
     });
     await _stopPreview();
 
@@ -352,16 +431,30 @@ class _StudioProPageState extends State<StudioProPage> {
 
       final List<String> ffmpegArguments = [];
       final double shotDuration = singleShotDuration;
+      final Random random = Random();
 
       for (final ShotItem shot in _shots) {
-        ffmpegArguments.addAll(shot.isImage
-            ? ['-loop', '1', '-t', '$shotDuration', '-i', shot.path]
-            : ['-ss', '0', '-t', '$shotDuration', '-i', shot.path]);
+        if (shot.isImage) {
+          ffmpegArguments.addAll(['-loop', '1', '-t', '$shotDuration', '-i', shot.path]);
+        } else {
+          // حساب مدة الفيديو الكلية واختيار نقطة بداية عشوائية (Random Cut)
+          double videoDuration = await _getVideoDuration(shot.path);
+          double startTime = 0.0;
+          if (videoDuration > shotDuration) {
+            double maxStart = videoDuration - shotDuration;
+            startTime = random.nextDouble() * maxStart; // بداية عشوائية
+          }
+          ffmpegArguments.addAll([
+            '-ss', startTime.toStringAsFixed(2),
+            '-t', '$shotDuration',
+            '-i', shot.path
+          ]);
+        }
       }
 
       String filterGraph = '';
       for (int i = 0; i < _shots.length; i++) {
-        // توحيد الصيغة والإطارات لحل مشكلة الرندرة والتوليد نهائياً
+        // توحيد الأبعاد وصيغة الألوان والإطارات لتجنب أي فشل في التوليد
         filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,fps=30';
         filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
@@ -377,10 +470,10 @@ class _StudioProPageState extends State<StudioProPage> {
       concatFilter += 'concat=n=${_shots.length}:v=1:a=0[concv];';
       filterGraph += concatFilter;
 
-      // تطبيق خيار الكتابة على الفيديو إذا كان مفعلاً
+      // تطبيق الكتابة على الفيديو إن وجدت
       if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
         final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'");
-        filterGraph += '[concv]drawtext=text=\'$textContent\':fontcolor=white:fontsize=42:x=(w-text_w)/2:y=h-150:box=1:boxcolor=black@0.6:boxborderw=10[outv]';
+        filterGraph += '[concv]drawtext=text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8[outv]';
       } else {
         filterGraph += '[concv]copy[outv]';
       }
@@ -394,7 +487,7 @@ class _StudioProPageState extends State<StudioProPage> {
         '-y', outputVideoPath,
       ]);
 
-      setState(() => _generationStatus = 'محرك المعالجة يجمع الفريمات الذكية بأقصى سرعة عتادية...');
+      setState(() => _generationStatus = 'محرك المعالجة يدمج اللقطات العشوائية بأقصى سرعة عتادية...');
 
       final session = await FFmpegKit.executeWithArguments(ffmpegArguments);
       final returnCode = await session.getReturnCode();
@@ -467,7 +560,7 @@ class _StudioProPageState extends State<StudioProPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'يتم الآن استخدام كامل كفاءة العتاد والذكاء الاصطناعي للمعالجة السريعة',
+                      'يتم استخدام خوارزميات التقطيع العشوائي والمعالجة السريعة',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
@@ -497,7 +590,7 @@ class _StudioProPageState extends State<StudioProPage> {
                                     Icon(Icons.psychology_outlined, size: 48, color: Color(0xFF00FF66)),
                                     SizedBox(height: 12),
                                     Text(
-                                      'محرك الذكاء الاصطناعي جاهز، أضف لقطات للبدء',
+                                      'محرك التقطيع العشوائي جاهز، أضف لقطات للبدء',
                                       style: TextStyle(color: Colors.grey, fontSize: 13),
                                     ),
                                   ],
@@ -624,7 +717,7 @@ class _StudioProPageState extends State<StudioProPage> {
                                 children: [
                                   Icon(Icons.auto_awesome, size: 18, color: Colors.cyan),
                                   SizedBox(width: 8),
-                                  Text('قالب التلوين بالذكاء الاصطناعي:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                  Text('قالب التلوين السينمائي (16 قالب):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                                 ],
                               ),
                               DropdownButton<int>(
@@ -677,7 +770,6 @@ class _StudioProPageState extends State<StudioProPage> {
                             ],
                           ),
                           const Divider(color: Colors.white10),
-                          // قسم الكتابة على الفيديو الجديد
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
