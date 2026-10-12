@@ -418,12 +418,12 @@ class _StudioProPageState extends State<StudioProPage> {
     }
   }
 
-  // محرك إنتاج وتوليد آمن ومستقر بنسبة 100% (Pre-render & Concat Demuxer)
+  // محرك إنتاج ذكي وآمن بنسبة 100% مع التعامل التلقائي مع الفيديوهات ذات الصوت أو الصامتة
   Future<void> _generateFinalVideo() async {
     if (_shots.isEmpty || _isGeneratingVideo) return;
     setState(() {
       _isGeneratingVideo = true;
-      _generationStatus = 'جاري تجهيز ومعالجة اللقطات...';
+      _generationStatus = 'جاري معالجة اللقطات والصوت...';
     });
     await _stopPreview();
 
@@ -438,7 +438,7 @@ class _StudioProPageState extends State<StudioProPage> {
       final Random random = Random();
       final List<String> partFiles = [];
 
-      // المرحلة الأولى: معالجة وتطبيع كل لقطة على حدة لتجنب أي فشل في التوافق
+      // المرحلة الأولى: معالجة كل لقطة بشكل مستقل وآمن
       for (int i = 0; i < _shots.length; i++) {
         final shot = _shots[i];
         final String partPath = '${appDir.path}/part_${i}_${DateTime.now().millisecondsSinceEpoch}.mp4';
@@ -446,9 +446,37 @@ class _StudioProPageState extends State<StudioProPage> {
 
         setState(() => _generationStatus = 'معالجة اللقطة ${i + 1} من ${_shots.length}...');
 
-        List<String> partArgs = [];
+        String filterStr = 'scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p';
+        filterStr += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
+        if (currentStyle.letterbox) {
+          final int boxH = (height / 10).round();
+          filterStr += ',drawbox=y=0:h=$boxH:color=black:t=fill,drawbox=y=$height-$boxH:h=$boxH:color=black:t=fill';
+        }
+
         if (shot.isImage) {
-          partArgs.addAll(['-loop', '1', '-t', '$shotDuration', '-i', shot.path]);
+          List<String> imgArgs = [
+            '-loop', '1',
+            '-t', '$shotDuration',
+            '-i', shot.path,
+            '-f', 'lavfi',
+            '-t', '$shotDuration',
+            '-i', 'anullsrc=r=44100:cl=stereo',
+            '-vf', filterStr,
+            '-map', '0:v',
+            '-map', '1:a',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-pix_fmt', 'yuv420p',
+            '-t', '$shotDuration',
+            '-y',
+            partPath
+          ];
+          final session = await FFmpegKit.executeWithArguments(imgArgs);
+          if (!ReturnCode.isSuccess(await session.getReturnCode())) {
+            throw Exception('فشل في معالجة الصورة رقم ${i + 1}');
+          }
         } else {
           double videoDuration = await _getVideoDuration(shot.path);
           if (videoDuration <= 0) videoDuration = shotDuration;
@@ -458,39 +486,55 @@ class _StudioProPageState extends State<StudioProPage> {
           if (videoDuration > currentClipDuration) {
             startTime = random.nextDouble() * (videoDuration - currentClipDuration);
           }
-          
-          partArgs.addAll([
+
+          // محاولة معالجة الفيديو بصوته الأصلي أولاً
+          List<String> videoArgsWithAudio = [
             '-ss', startTime.toStringAsFixed(2),
             '-t', currentClipDuration.toStringAsFixed(2),
-            '-i', shot.path
-          ]);
-        }
+            '-i', shot.path,
+            '-vf', filterStr,
+            '-map', '0:v',
+            '-map', '0:a',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-c:a', 'aac',
+            '-ar', '44100',
+            '-ac', '2',
+            '-pix_fmt', 'yuv420p',
+            '-y',
+            partPath
+          ];
 
-        // فلتر الأبعاد والتلوين والسينما
-        String filterStr = 'scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p';
-        filterStr += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
-        if (currentStyle.letterbox) {
-          final int boxH = (height / 10).round();
-          filterStr += ',drawbox=y=0:h=$boxH:color=black:t=fill,drawbox=y=$height-$boxH:h=$boxH:color=black:t=fill';
-        }
-
-        partArgs.addAll([
-          '-vf', filterStr,
-          '-c:v', 'libx264',
-          '-preset', 'ultrafast',
-          '-pix_fmt', 'yuv420p',
-          '-t', '$shotDuration',
-          '-y',
-          partPath
-        ]);
-
-        final partSession = await FFmpegKit.executeWithArguments(partArgs);
-        if (!ReturnCode.isSuccess(await partSession.getReturnCode())) {
-          throw Exception('فشل في معالجة اللقطة رقم ${i + 1}');
+          var session = await FFmpegKit.executeWithArguments(videoArgsWithAudio);
+          if (!ReturnCode.isSuccess(await session.getReturnCode())) {
+            // لو الفيديو صامت ولا يحتوي على مسار صوتي، نقوم بإضافة صوت صامت تلقائياً لتجنب الفشل
+            List<String> videoArgsWithoutAudio = [
+              '-ss', startTime.toStringAsFixed(2),
+              '-t', currentClipDuration.toStringAsFixed(2),
+              '-i', shot.path,
+              '-f', 'lavfi',
+              '-t', currentClipDuration.toStringAsFixed(2),
+              '-i', 'anullsrc=r=44100:cl=stereo',
+              '-vf', filterStr,
+              '-map', '0:v',
+              '-map', '1:a',
+              '-c:v', 'libx264',
+              '-preset', 'ultrafast',
+              '-c:a', 'aac',
+              '-b:a', '128k',
+              '-pix_fmt', 'yuv420p',
+              '-y',
+              partPath
+            ];
+            session = await FFmpegKit.executeWithArguments(videoArgsWithoutAudio);
+            if (!ReturnCode.isSuccess(await session.getReturnCode())) {
+              throw Exception('فشل في معالجة الفيديو رقم ${i + 1}');
+            }
+          }
         }
       }
 
-      // المرحلة الثانية: دمج الأجزاء المعالجة بطريقة Concat Demuxer الآمنة
+      // المرحلة الثانية: دمج الأجزاء المعالجة بسلاسة تامة
       setState(() => _generationStatus = 'جاري دمج اللقطات وإنتاج الفيديو النهائي...');
       
       final String concatFilePath = '${appDir.path}/concat_list_${DateTime.now().millisecondsSinceEpoch}.txt';
@@ -516,7 +560,7 @@ class _StudioProPageState extends State<StudioProPage> {
         throw Exception('فشل في دمج اللقطات');
       }
 
-      // المرحلة الثالثة: تطبيق الكتابة على الفيديو (إن كانت مفعلة) أو حفظ الناتج النهائي
+      // المرحلة الثالثة: إضافة النص إن وجد
       String finalOutput = mergedVideoPath;
       if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
         setState(() => _generationStatus = 'إضافة النصوص والتأثيرات...');
@@ -526,6 +570,7 @@ class _StudioProPageState extends State<StudioProPage> {
           '-vf', 'drawtext=fontfile=/system/fonts/Roboto-Regular.ttf:text=\'$textContent\':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h-140:box=1:boxcolor=black@0.6:boxborderw=8',
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
+          '-c:a', 'copy',
           '-pix_fmt', 'yuv420p',
           '-y',
           outputVideoPath
@@ -540,7 +585,7 @@ class _StudioProPageState extends State<StudioProPage> {
       }
 
       _lastGeneratedVideoPath = finalOutput;
-      _showSnackBar('تم إنتاج الفيديو بنجاح! يمكنك الآن حفظه وتصديره.');
+      _showSnackBar('تم إنتاج الفيديو بنجاح مع أصوات اللقطات!');
 
     } catch (e) {
       debugPrint('Render Error: $e');
@@ -602,7 +647,7 @@ class _StudioProPageState extends State<StudioProPage> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'جاري المعالجة والدمج بكفاءة عالية...',
+                      'جاري معالجة الفيديو والصوت الأصلي...',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
