@@ -117,6 +117,33 @@ const List<AdvancedStylePreset> advancedStyles = [
     letterbox: true,
     description: 'إضاءة درامية حادة وظلال عميقة بدون ألوان',
   ),
+  AdvancedStylePreset(
+    id: 'sunset_golden',
+    label: 'غروب ذهبي دافئ',
+    contrast: 1.10,
+    saturation: 1.30,
+    gamma: 1.05,
+    letterbox: false,
+    description: 'درجات ألوان دافئة وساطعة توحي بأوقات الغروب الساحرة',
+  ),
+  AdvancedStylePreset(
+    id: 'matrix_green',
+    label: 'ماتريكس سايبر',
+    contrast: 1.25,
+    saturation: 1.10,
+    gamma: 0.90,
+    letterbox: false,
+    description: 'طابع رقمي أخضر غامض مستوحى من عالم البرمجة والخيال',
+  ),
+  AdvancedStylePreset(
+    id: 'vibrant_pop',
+    label: 'بوب آرت ساطع',
+    contrast: 1.40,
+    saturation: 1.60,
+    gamma: 1.00,
+    letterbox: false,
+    description: 'ألوان قوية وحيوية تلفت الانتباه فوراً للفيديوهات السريعة',
+  ),
 ];
 
 class ShotItem {
@@ -136,6 +163,7 @@ class StudioProPage extends StatefulWidget {
 class _StudioProPageState extends State<StudioProPage> {
   final ImagePicker _picker = ImagePicker();
   final List<ShotItem> _shots = [];
+  final TextEditingController _textOverlayController = TextEditingController();
 
   int _selectedStyle = 0;
   int _selectedAspect = 0;
@@ -144,6 +172,7 @@ class _StudioProPageState extends State<StudioProPage> {
 
   bool _isPlayingPreview = false;
   bool _isGeneratingVideo = false;
+  bool _isTextOverlayEnabled = false;
   String? _lastGeneratedVideoPath;
 
   double _previewProgress = 0.0;
@@ -174,6 +203,7 @@ class _StudioProPageState extends State<StudioProPage> {
   void dispose() {
     _clearTimers();
     _videoController?.dispose();
+    _textOverlayController.dispose();
     super.dispose();
   }
 
@@ -331,7 +361,8 @@ class _StudioProPageState extends State<StudioProPage> {
 
       String filterGraph = '';
       for (int i = 0; i < _shots.length; i++) {
-        filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1';
+        // توحيد الصيغة والإطارات لحل مشكلة الرندرة والتوليد نهائياً
+        filterGraph += '[$i:v]scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,fps=30';
         filterGraph += ',eq=contrast=${currentStyle.contrast}:saturation=${currentStyle.saturation}:gamma=${currentStyle.gamma}';
         if (currentStyle.letterbox) {
           filterGraph += ',drawbox=y=0:h=$height/10:color=black:t=fill,drawbox=y=h-h/10:h=$height/10:color=black:t=fill';
@@ -343,8 +374,16 @@ class _StudioProPageState extends State<StudioProPage> {
       for (int i = 0; i < _shots.length; i++) {
         concatFilter += '[v$i]';
       }
-      concatFilter += 'concat=n=${_shots.length}:v=1:a=0[outv]';
+      concatFilter += 'concat=n=${_shots.length}:v=1:a=0[concv];';
       filterGraph += concatFilter;
+
+      // تطبيق خيار الكتابة على الفيديو إذا كان مفعلاً
+      if (_isTextOverlayEnabled && _textOverlayController.text.trim().isNotEmpty) {
+        final String textContent = _textOverlayController.text.trim().replaceAll("'", "\\'");
+        filterGraph += '[concv]drawtext=text=\'$textContent\':fontcolor=white:fontsize=42:x=(w-text_w)/2:y=h-150:box=1:boxcolor=black@0.6:boxborderw=10[outv]';
+      } else {
+        filterGraph += '[concv]copy[outv]';
+      }
 
       ffmpegArguments.addAll([
         '-filter_complex', filterGraph,
@@ -364,9 +403,12 @@ class _StudioProPageState extends State<StudioProPage> {
         _lastGeneratedVideoPath = outputVideoPath;
         _showSnackBar('تم إنتاج الفيديو بنجاح! يمكنك الآن حفظه وتصديره.');
       } else {
+        final failLog = await session.getFailStackTrace();
+        debugPrint('FFmpeg Error Log: $failLog');
         _showSnackBar('فشلت عملية رندرة وتوليد الفيديو النهائي');
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Unexpected error: $e');
       _showSnackBar('حدث خطأ غير متوقع أثناء المعالجة');
     } finally {
       if (mounted) {
@@ -634,6 +676,45 @@ class _StudioProPageState extends State<StudioProPage> {
                               ),
                             ],
                           ),
+                          const Divider(color: Colors.white10),
+                          // قسم الكتابة على الفيديو الجديد
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.text_fields, size: 18, color: Colors.greenAccent),
+                                  SizedBox(width: 8),
+                                  Text('الكتابة على الفيديو (نص ثابت):', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              Switch(
+                                value: _isTextOverlayEnabled,
+                                activeColor: const Color(0xFF00FF66),
+                                onChanged: (val) {
+                                  setState(() => _isTextOverlayEnabled = val);
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_isTextOverlayEnabled) ...[
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: _textOverlayController,
+                              style: const TextStyle(fontSize: 13),
+                              decoration: InputDecoration(
+                                hintText: 'اكتب النص الذي سيظهر أسفل الفيديو...',
+                                hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                                filled: true,
+                                fillColor: const Color(0xFF1A1C1F),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           Row(
                             children: [
@@ -678,7 +759,6 @@ class _StudioProPageState extends State<StudioProPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          // زر الحفظ والتصدير المخصص
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
